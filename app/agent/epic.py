@@ -33,6 +33,12 @@ metrics, names, or claims that are not stated or clearly implied in the text.
 reasonable out_of_scope list only from things the text clearly does NOT \
 cover (e.g. adjacent features it explicitly declines to address) - never \
 fabricate specifics.
+- Distinguish a settled decision from an open question. If the input \
+raises something as unresolved - phrased as a question, a "TBD", "not \
+sure if...", "open question is...", or similar hedging - do NOT convert \
+it into a firm in_scope or out_of_scope item. Leave genuinely unresolved \
+points out of both lists entirely; only list items the input treats as a \
+decided inclusion or a decided exclusion.
 - All five fields must be non-empty.
 - Output raw JSON only - no markdown code fences, no commentary.
 """
