@@ -26,27 +26,43 @@
 
 # 
 
-# \## 4. Personalisation and Responsible Recommendations Policy
+# \## 5. Gateway Token Verification Policy
 
 # 
 
-# Where customer preferences, dietary requirements, or health goals are collected, this information must only be used to provide relevant and responsible personalised insights. Personalised information must not override the underlying food data or create misleading interpretations of a product's overall score.
+# Gateway Token Verification: Digital payment confirmation hashes received from native mobile commerce gateways (Apple App Store In-App Purchases, Google Play Billing Library, and Stripe) must undergo immediate asynchronous server-side verification before premium access tokens are generated.
 
 # 
 
-# \## 5. Customer Data Retention Policy
+# \## 6. Billing Security Policy
+
+
+
+# Ledger Posting Requirements: Every successful subscription activation must post a corresponding, balanced ledger record containing matching transaction timestamps and gross revenue values to the isolated internal financial auditing tables within 60 seconds of confirmation.
+
+# 
+
+# \## 7. Exception Isolation Policy
+
+# Exception Isolation: Any incoming payment token containing currency mismatches, unresolved exchange rate rounding variances, or invalid digital signatures must be locked automatically, blocked from provisioning premium access, and routed to the High-Priority Billing Recovery Queue for manual treasury audit.
+
+# 
+
+# \## 8. Customer Data Retention Policy
 
 # 
 
 # Customer information must only be retained for as long as it is required for the purposes for which it was collected or where there is a legitimate business or legal requirement to retain it. Personal data should be securely stored, appropriately protected, and deleted or anonymised when it is no longer required.
 
+
+
+# \## 9. Work from Home Policy
+
 # 
 
-# \## 6. Product Information Governance Policy
+# Employees can avail Work from home gadgets only for 500 dollars.
+
+
 
 # 
-
-# Changes to food scores, ultra-processing levels, product information, or scoring methodologies must follow an appropriate governance and review process. Significant changes should be traceable, with clear ownership and an audit history to support accountability, consistency, and customer trust.
-
-
 

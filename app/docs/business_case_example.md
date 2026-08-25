@@ -6,8 +6,9 @@ Customer Satisfaction (CSAT) feedback indicates that users are dissatisfied beca
 
 This enhancement would give customers more meaningful information when evaluating products and could improve their understanding of the factors behind the overall food score. It would also help address a specific gap identified through customer feedback, potentially improving confidence in the information provided by the platform. Success could be measured through improved CSAT scores and a reduction in customer feedback relating to the lack of visibility around ultra-processing.
 
-## Business Case 2: Personalise the Food Scoring Experience
+## Business Case 2: Seamless Premium Subscription \& Payment Experience
 
-The current scoring experience provides the same interpretation of a food score to all users, which may make the score feel generic or disconnected from an individual's needs. By collecting a small number of additional details during onboarding—such as **dietary preferences (e.g. gluten-free, vegan), health goals, nutritional priorities, or ingredients users wish to avoid**—the platform could personalise how food scores are interpreted and communicated. Instead of simply displaying a generic score, the platform could provide a short, user-specific narrative explaining what that score means **for that particular customer and their goals**.
 
-Personalised narratives could make the scoring system feel more relevant, understandable and trustworthy because customers can see a direct connection between the score and their individual needs. For example, a product with a good overall score could still be highlighted as less suitable for a user whose goal is to reduce sugar. This approach could increase customer confidence in the scoring methodology and encourage users to view the platform as a personalised decision-support tool rather than simply a source of generic food ratings. Success could be measured through improved CSAT and trust scores, increased engagement and repeat usage, and higher adoption of personalised recommendations.
+
+The financial viability of the platform depends on converting free-tier scanners into premium subscribers. This business case addresses the friction users face during the upgrade phase. By creating a frictionless, localized in-app payment experience, we eliminate subscription drop-off, optimize checkout conversion rates, and instantly provision advanced platform features to paying users.
+

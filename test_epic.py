@@ -10,15 +10,15 @@ Elena (Customer Satisfaction SME): Yes! But look, it can't just be a random badg
 
 Sarah (Product Owner): Okay, let me write this down. So the pipeline has to ingest the vendor catalogs, tokenize the messy ingredient text arrays, and cross-reference them against a master additive risk dictionary to count the industrial markers. It calculates the tier based only on that processing depth, writes the classification to the database, and pushes it out. I'll make sure the engineering documentation is explicitly locked down to just this ultra-processing logic so the dev team doesn't get sidetracked by other metrics.
 """,
-    """JIRA-7195: Automated Generation of Personalized Scoring Narrative Context
+    """
+JIRA-9108: Refine Premium Mobile Subscription Payment Gateway Handshake
 
 Description:
-Implement an asynchronous text generation pipeline to synthesize localized narrative text explaining what a product score means specifically to an individual user's profile. The service must intercept the final numeric product score and evaluate it against active user-declared health goals (e.g., active weight loss tracking, muscle gain macro targets, or endurance athletic conditioning).
+Clean up the intermittent timeout errors occurring during the backend validation sequence of the in-app purchase flow. The core commerce service must reliably intercept the incoming transaction tokens from Apple Billing and Stripe APIs, execute a secure server-side validation check, and immediately toggle the user status to 'PREMIUM_ACTIVE' inside DynamoDB. 
 
-Instead of suggesting alternate items, the engine must parse the product's ingredient and nutritional metadata to explain *why* the score matters directly to their selected fitness benchmarks. For instance, if a product scores poorly for a user focusing on muscle gain, the service must append a dynamic text block stating: "This item's score is impacted by low bioavailable protein density, which falls short of your active muscle recovery goals."
+Ensure that if the webhook response takes longer than 2.5 seconds, the application invokes a lightweight, asynchronous retry loop up to three times while keeping a secure spinning state active on the mobile interface. If all retries fail, seamlessly push the payload into the High-Priority Billing Recovery Queue and route a localized warning message to the client's screen to avoid drop-offs.
 
-The resulting string block must be stored directly in a localized text field cache. This ensures the mobile UI layer can display a bespoke, descriptive explanation block explaining the precise personal impact of the score during an active barcode scan session.
-""",
+    """
 ]
 
 for i, text in enumerate(test_inputs, 1):

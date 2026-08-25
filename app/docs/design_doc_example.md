@@ -2,47 +2,50 @@
 
 This reference document outlines core backend systems for the product platform, detailing data ingestion pipelines and automated batch processes.
 
----
+\---
 
-## 1. Ultra-Processing Level Enrichment Engine
+## 1\. Ultra-Processing Level Enrichment Engine
 
 ### Objective
+
 This workflow enhances product metadata profiles by identifying industrial modifications and classifying foods based on their degree of processing. It enables customer-facing client microservices to serve automated processing metrics alongside classic nutritional totals.
 
 ```
-[Retailer Data Portal] ➔ [S3 Raw Ingestion] ➔ [Parser & Tokenizer Lambda]
+\\\[Retailer Data Portal] ➔ \\\[S3 Raw Ingestion] ➔ \\\[Parser \\\& Tokenizer Lambda]
                                                      │
                                                      ▼
-[UI Layer & Client Cache] ◀ [DynamoDB Update] ◀ [Rule Engine & Classification]
+\\\[UI Layer \\\& Client Cache] ◀ \\\[DynamoDB Update] ◀ \\\[Rule Engine \\\& Classification]
 ```
 
 ### Functional Breakdown
-* **Data Ingestion & Extraction**: Raw item catalogues arrive daily from retail vendors via webhooks. A serverless function decompiles JSON packets, separating structural properties like text arrays from baseline numeric weights.
+
+* **Data Ingestion \& Extraction**: Raw item catalogues arrive daily from retail vendors via webhooks. A serverless function decompiles JSON packets, separating structural properties like text arrays from baseline numeric weights.
 * **Ingredient Text Normalization**: A processing utility strips special characters, parses text arrays, and isolates ingredient tokens. It cross-references tokens against dictionaries tracking industrial additives like hydrolyzed proteins, high-fructose syrups, and specific texturizers.
 * **Algorithmic Categorization**: The classification service counts industrial markers. Items matching defined additive profiles receive an ultra-processing tier rating (Low, Moderate, High). The system writes this value directly to the core catalog database.
-* **Cache Eviction & UI Distribution**: Successful database writes trigger a message queue event. This event clears localized Redis caches, forcing mobile applications to pull updated payloads displaying the processing visibility layer on subsequent user sessions.
+* **Cache Eviction \& UI Distribution**: Successful database writes trigger a message queue event. This event clears localized Redis caches, forcing mobile applications to pull updated payloads displaying the processing visibility layer on subsequent user sessions.
 
----
+\---
 
-## 2. Automated In-App Payment Reconciliation
+## 2\. Automated In-App Payment Reconciliation
 
 ### Objective
-This workflow verifies that mobile subscription transactions recorded by external processing gateways align with internal financial accounting ledgers. It handles revenue tracking and manages premium user access without human intervention.
 
-```
-[Stripe/App Store API] ➔ [Secure SFTP Repository] ➔ [Reconciliation Cron Job]
-                                                            │
-                                                            ▼
-[Financial Ledger DB] ◀ [Premium Provisioning] ◀ [Hash Match / Validation]
-                                                            │ (If Unmatched)
-                                                            ▼
-                                                   [Exception Queue]
-```
+This workflow handles real-time credit card and app store transactions when a user upgrades to a premium account. It ensures secure token validation, updates user permissions instantly, and creates an audit trail for financial tracking.
+
+
+
+\[User App Interface] ──▶ \[Mobile Commerce Gateway] ──▶ \[Backend Validation]
+
+&#x20;                             (Stripe / Apple)                 │
+
+&#x20;                                                              ▼
+
+\[UI Success State]   ◀── \[Premium Flag Active]   ◀── \[Internal Ledger Database]```
 
 ### Functional Breakdown
-* **Settlement Retrieval**: A secure cron job runs nightly at 01:00 UTC to pull settlement logs from external payment systems (Stripe, Apple App Store, Google Play). These logs are transferred as encrypted CSV files to an internal storage repository.
-* **Transaction Parsing & Hashing**: An accounting service processes the CSV files line-by-line. It extracts transaction reference hashes, gross currency inputs, transaction timestamps, and associated account identification identifiers.
-* **Database Invoice Matching**: The reconciliation engine searches the internal database for pending subscription invoices matching the transaction reference hash. If fields match, the system marks the transaction as balanced.
-* **Access Provisioning & Exception Routing**:
-  * **Success**: The platform extends the user's premium tier access for 30 days and posts a balanced journal entry to the financial ledger.
-  * **Failure**: Unmatched records (e.g., due to exchange rate rounding errors or missing account tags) bypass automated processing and route directly to an isolated exception queue for manual finance operations review.
+
+* Transaction Ingestion: The user initiates a checkout request on their mobile device. The app passes the purchase packet directly to native billing gateways (Stripe, Apple In-App Purchases, or Google Play Commerce) to safely collect payment information.
+* Token Authentication: Upon processing the payment, the gateway passes an encrypted confirmation token back to our verification backend. The platform decodes this hash to verify the status, currency flags, and expiration dates match.
+* Access Provisioning: Once authenticated, the account access microservice updates the consumer identity schema state to PREMIUM\_ACTIVE. This step instantly unlocks deep nutrition tracking tools and additive databases on the client's screen.
+* Ledger Posting: The system automatically generates a balanced accounting entry containing transaction values and timestamps, writing it directly to the local ledger database for nightly revenue reconciliation.
+
