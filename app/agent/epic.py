@@ -81,25 +81,26 @@ def draft_epic(initiative_text: str) -> dict:
     return epic.model_dump()
 
 
-if __name__ == "__main__":
-    EXAMPLE_INITIATIVE = """
-    Ok so coming out of the CSAT review yesterday - customers keep telling us
-    they don't understand WHY a product got the score it did. support tickets
-    are up again this month specifically people asking "why is this rated
-    lower than a similar product" and we don't have a good answer for them in
-    app right now. marketing also flagged this as a blocker for the Q3
-    partnership push bc partner brands want to know how their products will
-    be explained to shoppers. idea floated in the meeting: show a short
-    plain-language breakdown alongside the score - what factors pushed it up
-    or down, in customer-friendly language, not our internal scoring jargon.
-    should work on both the product detail page and the comparison view since
-    that's where people are asking the question. NOT trying to let users
-    override or edit the score themselves - that's a different (and much
-    scarier) conversation for another day, and we're also explicitly not
-    touching the underlying scoring algorithm itself, just how it's explained.
-    biggest open question is whether legal needs to review the language since
-    it's basically explaining a rating methodology to consumers.
-    """.strip()
+EXAMPLE_INITIATIVE = """
+Ok so coming out of the CSAT review yesterday - customers keep telling us
+they don't understand WHY a product got the score it did. support tickets
+are up again this month specifically people asking "why is this rated
+lower than a similar product" and we don't have a good answer for them in
+app right now. marketing also flagged this as a blocker for the Q3
+partnership push bc partner brands want to know how their products will
+be explained to shoppers. idea floated in the meeting: show a short
+plain-language breakdown alongside the score - what factors pushed it up
+or down, in customer-friendly language, not our internal scoring jargon.
+should work on both the product detail page and the comparison view since
+that's where people are asking the question. NOT trying to let users
+override or edit the score themselves - that's a different (and much
+scarier) conversation for another day, and we're also explicitly not
+touching the underlying scoring algorithm itself, just how it's explained.
+biggest open question is whether legal needs to review the language since
+it's basically explaining a rating methodology to consumers.
+""".strip()
 
+
+if __name__ == "__main__":
     result = draft_epic(EXAMPLE_INITIATIVE)
     print(json.dumps(result, indent=2))
