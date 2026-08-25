@@ -5,3 +5,4 @@ chromadb
 openai
 python-dotenv
 requests
+streamlit

@@ -1,0 +1,8 @@
+[server]
+# The default watcher walks every imported module's __path__ (including
+# sentence-transformers' transitive `transformers` dependency, which has
+# dozens of optional torchvision-only submodules we never use) to figure
+# out what to watch for hot-reload. That produces a wall of harmless
+# ModuleNotFoundError tracebacks on every startup. Disabling it is safe
+# for this project - just re-run `streamlit run` manually after editing.
+fileWatcherType = "none"
