@@ -10,6 +10,7 @@ Run with:
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -28,7 +29,32 @@ from app.agent.epic import EXAMPLE_INITIATIVE, EpicDraftError
 from app.agent.features import RETRIEVAL_K, FeatureDraftError
 from app.agent.pipeline import BACKLOG_API_BASE_URL, WriteBackError, run_pipeline
 from app.agent.stories import StoryDraftError
+from app.rag.ingest import CHROMA_DIR, build_index
 from app.rag.retrieve import retrieve
+
+# On by default, so local dev behaves exactly as before with zero setup.
+# Set ENABLE_WRITEBACK=false as an environment variable on a hosted
+# deploy (e.g. Streamlit Community Cloud, where the mock FastAPI backend
+# is never running) to hide the checkbox there and skip write-back
+# entirely, so the app is usable end-to-end without FastAPI.
+WRITEBACK_ENABLED = os.environ.get("ENABLE_WRITEBACK", "true").lower() == "true"
+
+
+@st.cache_resource(show_spinner="Building knowledge-base index (first run only)...")
+def _ensure_index_built() -> None:
+    """Build the Chroma index if it isn't there yet.
+
+    chroma_db/ is gitignored (not committed) and, on top of that, hosted
+    platforms like Streamlit Community Cloud reset local disk on every
+    restart/redeploy - so the index needs to be (re)built at startup
+    rather than assumed to exist. st.cache_resource makes this run once
+    per live app instance rather than on every script rerun.
+    """
+    if not CHROMA_DIR.is_dir():
+        build_index()
+
+
+_ensure_index_built()
 
 st.set_page_config(page_title="PO Backlog Agent", layout="wide")
 
@@ -45,12 +71,15 @@ initiative_text = st.text_area(
     placeholder="Paste your raw initiative text here (100-500 words)...",
 )
 
-write_back = st.checkbox(
-    "Write result to mock backlog API",
-    value=False,
-    help=f"POSTs the epic/features/stories to {BACKLOG_API_BASE_URL}. "
-    "Requires `uvicorn app.api.main:app --reload` running separately.",
-)
+if WRITEBACK_ENABLED:
+    write_back = st.checkbox(
+        "Write result to mock backlog API",
+        value=False,
+        help=f"POSTs the epic/features/stories to {BACKLOG_API_BASE_URL}. "
+        "Requires `uvicorn app.api.main:app --reload` running separately.",
+    )
+else:
+    write_back = False
 
 generate_clicked = st.button("Generate", type="primary")
 

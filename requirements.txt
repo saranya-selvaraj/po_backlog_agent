@@ -1,8 +1,9 @@
-fastapi
-uvicorn[standard]
-sentence-transformers
-chromadb
-openai
-python-dotenv
-requests
-streamlit
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+sentence-transformers==6.0.0
+chromadb==1.5.9
+openai==3.3.1
+python-dotenv==1.2.3
+requests==2.34.2
+streamlit==1.62.0
+torch==2.13.0
