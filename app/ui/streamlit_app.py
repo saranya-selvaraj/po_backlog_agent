@@ -25,9 +25,10 @@ if str(_PROJECT_ROOT) not in sys.path:
 
 import streamlit as st
 
-from app.agent.epic import EXAMPLE_INITIATIVE, EpicDraftError
+from app.agent.epic import EXAMPLE_INITIATIVE, EpicDraftError, InputGuardrailError
 from app.agent.features import RETRIEVAL_K, FeatureDraftError
 from app.agent.pipeline import BACKLOG_API_BASE_URL, WriteBackError, run_pipeline
+from app.agent.scenarios import SCENARIOS
 from app.agent.stories import StoryDraftError
 from app.rag.ingest import CHROMA_DIR, build_index
 from app.rag.retrieve import retrieve
@@ -64,6 +65,22 @@ st.caption(
     "and generate a structured EPIC → Features → Stories backlog tree."
 )
 
+with st.expander("Try a scenario (happy path + negative cases)", expanded=False):
+    st.caption(
+        "Each button loads a sample input and runs it, so you can see how the "
+        "agent handles well-formed initiatives and how the guardrails handle "
+        "empty/nonsensical input and suspected sensitive data."
+    )
+    for scenario in SCENARIOS:
+        cols = st.columns([3, 7])
+        with cols[0]:
+            if st.button(scenario["label"], key=f"scn_{scenario['key']}", use_container_width=True):
+                st.session_state["initiative_text"] = scenario["input"]
+                st.session_state["run_scenario"] = True
+                st.rerun()
+        with cols[1]:
+            st.markdown(scenario["description"])
+
 initiative_text = st.text_area(
     "Initiative",
     value=st.session_state.get("initiative_text", EXAMPLE_INITIATIVE),
@@ -83,9 +100,19 @@ else:
 
 generate_clicked = st.button("Generate", type="primary")
 
-if generate_clicked:
+# Scenario buttons set this so the loaded example runs without a second click.
+run_scenario = st.session_state.pop("run_scenario", False)
+
+if generate_clicked or run_scenario:
     if not initiative_text.strip():
-        st.warning("Paste an initiative first.")
+        # Scenario 1 (empty input) - handled here for the blank-box case so
+        # we still show the standard guardrail message rather than a plain nag.
+        st.session_state.pop("result", None)
+        st.warning(
+            "We couldn't process your input. Please provide a valid initiative "
+            "description, such as relevant meeting notes, JIRA ticket summaries, "
+            "or project outlines, and try again."
+        )
     else:
         st.session_state["initiative_text"] = initiative_text
         try:
@@ -103,6 +130,14 @@ if generate_clicked:
             st.session_state["context_chunks"] = context_chunks
             st.session_state["write_back_done"] = write_back
 
+        except InputGuardrailError as e:
+            # Negative scenarios 1 & 2: nothing was sent to / processed by
+            # the model beyond the guardrail check. Clear any prior result.
+            st.session_state.pop("result", None)
+            if e.code == "sensitive_data":
+                st.error(f"🔒 {e.user_message}")
+            else:
+                st.warning(f"⚠️ {e.user_message}")
         except (EpicDraftError, FeatureDraftError, StoryDraftError) as e:
             st.error(f"The model's output didn't validate, so nothing was generated:\n\n{e}")
         except WriteBackError as e:
