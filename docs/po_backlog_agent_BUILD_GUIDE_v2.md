@@ -105,16 +105,17 @@ Stages are ordered to match the graph in PRD §6, so you can build and test each
 
 ---
 
-## Stage 6 — Node 4: Publish, Retry, Time-Pass Simulator
+## Stage 6 — Node 4: Publish, Retry, Time-Pass Simulator, and API Access Control
 
-**What:** Publish to mock JIRA (succeeds by default, forced-failure flag available per PRD §9), 3-retry cap, escalate-to-user on continued failure, simulated clock for the retry schedule.
+**What:** Publish to mock JIRA (succeeds by default, forced-failure flag available per PRD §9), 3-retry cap, escalate-to-user on continued failure, simulated clock for the retry schedule — plus a service-account API key gating the publish endpoints (PRD §9's access-control addition).
 
 **No major PM decision needed** — mechanics are fully specified in PRD §9; flag here only if you want the retry count or simulated-hour increments changed.
 
 **Steps:**
 1. Claude adds the forced-failure flag to the mock API and the retry/escalate logic to the graph.
-2. Claude builds the "Simulate time passing" control and wires it to advance `next_retry_at` and re-trigger publish attempts.
-3. You test both paths: a clean run (straight to Published) and a forced-failure run (watch it go through 3 retries, hit "awaiting user," then simulate time forward to resolution) — confirming the table updates live as we discussed.
+2. Claude adds the API key check (FastAPI `APIKeyHeader` dependency) to the POST endpoints only, validated against an env var, and wires the `create_backlog_item()` tool to send it as a header on every call.
+3. Claude builds the "Simulate time passing" control and wires it to advance `next_retry_at` and re-trigger publish attempts.
+4. You test both paths: a clean run (straight to Published) and a forced-failure run (watch it go through 3 retries, hit "awaiting user," then simulate time forward to resolution) — confirming the table updates live as we discussed. Also confirm a request *without* the API key gets rejected, so the access control is actually doing something.
 
 ---
 

@@ -28,6 +28,17 @@ COLLECTION_NAME = "po_backlog_kb"
 EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
 CHUNK_SIZE_WORDS = 200
 
+# Doc-type vocabulary for the optional YAML front matter at the top of a doc:
+#   ---
+#   doc_type: workflow
+#   topics: ultra-processing, ingestion, cache
+#   ---
+# Feature-level retrieval leans on HIGH_LEVEL types, Story-level on GRANULAR
+# ones. Any other value (or no front matter -> "general") is never filtered out.
+HIGH_LEVEL_DOC_TYPES = ("architecture", "functional_requirements", "workflow", "integration")
+GRANULAR_DOC_TYPES = ("use_case", "data_model", "api", "rules")
+DEFAULT_DOC_TYPE = "general"
+
 
 # ---------------------------------------------------------------------------
 # Chunking
@@ -129,6 +140,31 @@ def load_documents() -> list[tuple[str, str]]:
     return [(path.name, path.read_text(encoding="utf-8")) for path in md_files]
 
 
+_FRONT_MATTER_RE = re.compile(r"\A\s*---[ \t]*\n(.*?)\n---[ \t]*(?:\n|\Z)", re.S)
+
+
+def parse_front_matter(text: str) -> tuple[dict[str, str], str]:
+    """Split an optional `---` ... `---` header of `key: value` lines off the
+    top of a doc. Returns ({key: value}, body_without_header)."""
+    match = _FRONT_MATTER_RE.match(text)
+    if not match:
+        return {}, text
+    meta: dict[str, str] = {}
+    for line in match.group(1).splitlines():
+        key, sep, value = line.partition(":")
+        if sep:
+            meta[key.strip().lower()] = value.strip().strip("[]")
+    return meta, text[match.end():]
+
+
+def doc_metadata(front_matter: dict[str, str]) -> tuple[str, str]:
+    """(doc_type, topics) for a doc; topics is a comma-separated lowercase string
+    because Chroma metadata values must be scalars."""
+    doc_type = front_matter.get("doc_type", "").strip().lower().replace(" ", "_") or DEFAULT_DOC_TYPE
+    topics = ",".join(t.strip().lower() for t in front_matter.get("topics", "").split(",") if t.strip())
+    return doc_type, topics
+
+
 def build_index() -> int:
     """Chunk + embed all docs and (re)write the Chroma collection.
 
@@ -141,11 +177,15 @@ def build_index() -> int:
     metadatas: list[dict] = []
 
     for filename, text in documents:
-        doc_chunks = chunk_text(text)
+        front_matter, body = parse_front_matter(text)
+        doc_type, topics = doc_metadata(front_matter)
+        doc_chunks = chunk_text(body)
         for i, chunk in enumerate(doc_chunks):
             ids.append(f"{filename}::chunk_{i}")
             texts.append(chunk)
-            metadatas.append({"source": filename, "chunk_index": i})
+            metadatas.append(
+                {"source": filename, "chunk_index": i, "doc_type": doc_type, "topics": topics}
+            )
 
     print(f"Loaded {len(documents)} document(s) -> {len(texts)} chunk(s).")
 

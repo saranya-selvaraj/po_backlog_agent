@@ -24,12 +24,24 @@ _model: SentenceTransformer | None = None
 _collection = None
 
 
+# Keyword boost (only used when boost_text is passed): each doc topic found in
+# the boost text adds TOPIC_BOOST_PER_MATCH to a chunk's *ranking* score, capped.
+# The relevance threshold always uses the raw similarity, so a boost can reorder
+# relevant chunks but can never rescue an irrelevant one.
+TOPIC_BOOST_PER_MATCH = 0.05
+TOPIC_BOOST_CAP = 0.15
+BOOST_CANDIDATE_MULTIPLIER = 3  # fetch k*3 candidates so a boost has something to reorder
+
+
 @dataclass
 class RetrievedChunk:
     text: str
     source: str
     chunk_index: int
     score: float  # cosine similarity, higher = more relevant
+    doc_type: str = "general"
+    topics: str = ""  # comma-separated, from the doc's front matter
+    boost: float = 0.0  # topic-overlap bonus, ranking only
 
 
 def _get_model() -> SentenceTransformer:
@@ -51,30 +63,53 @@ def _get_collection():
     return _collection
 
 
-def retrieve(query: str, k: int = 3) -> list[RetrievedChunk]:
+def _topic_boost(topics: str, boost_text: str | None) -> float:
+    if not boost_text or not topics:
+        return 0.0
+    text = boost_text.lower()
+    matches = sum(1 for t in topics.split(",") if t and t in text)
+    return min(TOPIC_BOOST_CAP, TOPIC_BOOST_PER_MATCH * matches)
+
+
+def retrieve(
+    query: str,
+    k: int = 3,
+    where: dict | None = None,
+    boost_text: str | None = None,
+) -> list[RetrievedChunk]:
     """Return the top-k most relevant chunks for `query`.
 
     Each result includes the source filename and a cosine-similarity score.
     Results below RELEVANCE_THRESHOLD are dropped, so a query unrelated to
     the knowledge base can legitimately return an empty list rather than
     forcing a match.
+
+    where: optional Chroma metadata filter, e.g. {"doc_type": {"$nin": [...]}}.
+    boost_text: optional text (e.g. the EPIC) - chunks whose doc topics appear
+    in it are ranked higher (see TOPIC_BOOST_*).
     """
     global _collection
 
     model = _get_model()
     query_embedding = model.encode([query]).tolist()
+    n_wanted = k * BOOST_CANDIDATE_MULTIPLIER if boost_text else k
+
+    def _query():
+        collection = _get_collection()
+        n_results = max(1, min(n_wanted, collection.count()))
+        return collection.query(
+            query_embeddings=query_embedding, n_results=n_results, where=where
+        )
 
     try:
-        collection = _get_collection()
-        results = collection.query(query_embeddings=query_embedding, n_results=k)
+        results = _query()
     except Exception:
         # The cached collection object goes stale if `ingest.py` rebuilt
         # the index (it deletes + recreates the collection) after this
         # process first fetched it - the old handle no longer points at
         # anything valid. Drop the cache and retry once before giving up.
         _collection = None
-        collection = _get_collection()
-        results = collection.query(query_embeddings=query_embedding, n_results=k)
+        results = _query()
 
     documents = results["documents"][0]
     metadatas = results["metadatas"][0]
@@ -85,16 +120,21 @@ def retrieve(query: str, k: int = 3) -> list[RetrievedChunk]:
         score = 1 - distance
         if score < RELEVANCE_THRESHOLD:
             continue
+        topics = meta.get("topics", "")
         chunks.append(
             RetrievedChunk(
                 text=doc,
                 source=meta["source"],
                 chunk_index=meta["chunk_index"],
                 score=round(score, 4),
+                doc_type=meta.get("doc_type", "general"),
+                topics=topics,
+                boost=_topic_boost(topics, boost_text),
             )
         )
 
-    return chunks
+    chunks.sort(key=lambda c: c.score + c.boost, reverse=True)
+    return chunks[:k]
 
 
 if __name__ == "__main__":

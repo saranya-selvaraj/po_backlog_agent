@@ -1,3 +1,7 @@
+---
+doc_type: rules
+topics: ultra-processing, data accuracy, transparency, gateway token verification, billing security, ledger, exception isolation, data retention
+---
 # \# Food Scoring App — Core Policy Document
 
 # 

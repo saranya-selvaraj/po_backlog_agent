@@ -1,3 +1,7 @@
+---
+doc_type: business_case
+topics: ultra-processing, food score, csat, transparency, premium subscription, payment, checkout, conversion
+---
 # Business Case: Enhancing Food Information and Personalisation
 
 ## Business Case 1: Introduce Ultra-Processing Levels

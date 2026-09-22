@@ -1,3 +1,7 @@
+---
+doc_type: workflow
+topics: ultra-processing, ingestion, classification, ingredient, cache, payment reconciliation, token authentication, ledger, provisioning, premium
+---
 # Engineering Workflows: Feature Evaluation and Platform Operations
 
 This reference document outlines core backend systems for the product platform, detailing data ingestion pipelines and automated batch processes.
