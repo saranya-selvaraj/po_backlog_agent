@@ -1,33 +1,23 @@
 """Mock Backlog API (PRD §7).
 
-FastAPI app exposing 4 endpoints backed by in-memory Python dicts:
-  POST /epics
-  POST /epics/{epic_id}/features
-  POST /features/{feature_id}/stories
-  GET  /epics/{epic_id}
+Thin FastAPI wrapper around app.api.store's in-memory logic, kept for
+manual testing via Swagger UI. The real write-back path
+(app.agent.pipeline) calls app.api.store directly, in-process, so this
+server does not need to be running for write-back to work - it's an
+optional, standalone way to poke at the same store shape over HTTP.
+Note it has its own separate in-memory state from any Streamlit process
+that also imports app.api.store; the two don't share data.
 
-No database, no auth. Run with:
+Run with:
     uvicorn app.api.main:app --reload
 """
-
-import uuid
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
+from app.api import store
+
 app = FastAPI(title="PO Backlog Agent - Mock Backlog API")
-
-# ---------------------------------------------------------------------------
-# In-memory storage
-# ---------------------------------------------------------------------------
-# epic_id -> epic dict (with nested "features" list)
-epics_db: dict[str, dict] = {}
-# feature_id -> feature dict (with nested "stories" list)
-features_db: dict[str, dict] = {}
-
-
-def new_id() -> str:
-    return uuid.uuid4().hex
 
 
 # ---------------------------------------------------------------------------
@@ -82,40 +72,28 @@ class EpicWithFeatures(Epic):
 # ---------------------------------------------------------------------------
 @app.post("/epics", response_model=Epic)
 def create_epic(epic: EpicCreate) -> dict:
-    epic_id = new_id()
-    record = {"id": epic_id, **epic.model_dump(), "features": []}
-    epics_db[epic_id] = record
-    return record
+    return store.create_epic(epic.model_dump())
 
 
 @app.post("/epics/{epic_id}/features", response_model=Feature)
 def create_feature(epic_id: str, feature: FeatureCreate) -> dict:
-    epic = epics_db.get(epic_id)
-    if epic is None:
-        raise HTTPException(status_code=404, detail=f"Epic '{epic_id}' not found")
-
-    feature_id = new_id()
-    record = {"id": feature_id, "epic_id": epic_id, **feature.model_dump(), "stories": []}
-    features_db[feature_id] = record
-    epic["features"].append(record)
-    return record
+    try:
+        return store.create_feature(epic_id, feature.model_dump())
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @app.post("/features/{feature_id}/stories", response_model=Story)
 def create_story(feature_id: str, story: StoryCreate) -> dict:
-    feature = features_db.get(feature_id)
-    if feature is None:
-        raise HTTPException(status_code=404, detail=f"Feature '{feature_id}' not found")
-
-    story_id = new_id()
-    record = {"id": story_id, "feature_id": feature_id, **story.model_dump()}
-    feature["stories"].append(record)
-    return record
+    try:
+        return store.create_story(feature_id, story.model_dump())
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @app.get("/epics/{epic_id}", response_model=EpicWithFeatures)
 def get_epic(epic_id: str) -> dict:
-    epic = epics_db.get(epic_id)
-    if epic is None:
-        raise HTTPException(status_code=404, detail=f"Epic '{epic_id}' not found")
-    return epic
+    try:
+        return store.get_epic(epic_id)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e

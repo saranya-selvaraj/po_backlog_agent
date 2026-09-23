@@ -2,7 +2,8 @@
 
 Paste an initiative, hit Generate, and see the EPIC, the retrieved RAG
 context, the Features, and the Stories + Acceptance Criteria for each.
-Optionally writes the resulting tree to the mock backlog API (Stage 1).
+Optionally writes the resulting tree to the mock backlog store, in-process
+(Stage 1; see app/api/store.py).
 
 Run with:
     streamlit run app/ui/streamlit_app.py
@@ -10,7 +11,6 @@ Run with:
 
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
@@ -27,18 +27,12 @@ import streamlit as st
 
 from app.agent.epic import EXAMPLE_INITIATIVE, EpicDraftError, InputGuardrailError
 from app.agent.features import RETRIEVAL_K, FeatureDraftError
-from app.agent.pipeline import BACKLOG_API_BASE_URL, WriteBackError, run_pipeline
+from app.agent.pipeline import WriteBackError, run_pipeline
 from app.agent.scenarios import SCENARIOS
 from app.agent.stories import StoryDraftError
+from app.evals.online_log import log_run, update_rating
 from app.rag.ingest import CHROMA_DIR, build_index
 from app.rag.retrieve import retrieve
-
-# On by default, so local dev behaves exactly as before with zero setup.
-# Set ENABLE_WRITEBACK=false as an environment variable on a hosted
-# deploy (e.g. Streamlit Community Cloud, where the mock FastAPI backend
-# is never running) to hide the checkbox there and skip write-back
-# entirely, so the app is usable end-to-end without FastAPI.
-WRITEBACK_ENABLED = os.environ.get("ENABLE_WRITEBACK", "true").lower() == "true"
 
 
 @st.cache_resource(show_spinner="Building knowledge-base index (first run only)...")
@@ -88,15 +82,12 @@ initiative_text = st.text_area(
     placeholder="Paste your raw initiative text here (100-500 words)...",
 )
 
-if WRITEBACK_ENABLED:
-    write_back = st.checkbox(
-        "Write result to mock backlog API",
-        value=False,
-        help=f"POSTs the epic/features/stories to {BACKLOG_API_BASE_URL}. "
-        "Requires `uvicorn app.api.main:app --reload` running separately.",
-    )
-else:
-    write_back = False
+write_back = st.checkbox(
+    "Write result to mock backlog store",
+    value=False,
+    help="Writes the epic/features/stories to the mock backlog store "
+    "(in-process - no separate server needed).",
+)
 
 generate_clicked = st.button("Generate", type="primary")
 
@@ -129,6 +120,11 @@ if generate_clicked or run_scenario:
             st.session_state["result"] = result
             st.session_state["context_chunks"] = context_chunks
             st.session_state["write_back_done"] = write_back
+            # Online-eval logging: every real generation gets one row
+            # (input, output, timestamp), rated separately below once the
+            # user reacts to it. New run -> new id, so the rating widget
+            # resets rather than carrying over a stale rating.
+            st.session_state["online_log_run_id"] = log_run(initiative_text, result)
 
         except InputGuardrailError as e:
             # Negative scenarios 1 & 2: nothing was sent to / processed by
@@ -193,7 +189,13 @@ if result:
 
     if st.session_state.get("write_back_done"):
         epic_id = epic.get("id")
-        st.success(
-            f"Written to the mock backlog API. Verify with "
-            f"`GET {BACKLOG_API_BASE_URL}/epics/{epic_id}`."
-        )
+        st.success(f"Written to the mock backlog store (epic id: {epic_id}).")
+
+    run_id = st.session_state.get("online_log_run_id")
+    if run_id is not None:
+        st.divider()
+        st.markdown("**Rate this output**")
+        stars = st.feedback("stars", key=f"rating_{run_id}")
+        if stars is not None:
+            update_rating(run_id, stars + 1)  # st.feedback is 0-indexed
+            st.caption(f"Thanks - logged {stars + 1}/5 for run #{run_id}.")

@@ -90,17 +90,36 @@ GROQ_API_KEY=your_key_here
 python app/rag/ingest.py
 ```
 
-### 3. Start the mock backlog API (leave running in its own terminal)
-```powershell
-uvicorn app.api.main:app --reload
-```
-Swagger UI for manual testing: http://localhost:8000/docs
-
-### 4. Run the UI (in a second terminal, with venv activated)
+### 3. Run the UI
 ```powershell
 streamlit run app/ui/streamlit_app.py
 ```
-Paste an initiative into the text box and click Generate.
+Paste an initiative into the text box and click Generate. The "Write result
+to mock backlog store" checkbox writes in-process (see app/api/store.py) -
+no separate server needed.
+
+### Optional: offline RAGAS eval (app/evals/offline_eval.py)
+Not installed by `requirements.txt` and not needed to run the app - only
+for scoring the RAG pipeline against the hand-built test set. `ragas`
+needs an `openai` version that conflicts with the app's pinned one, so
+install in this exact order (a single combined `pip install` of both
+files will fail to resolve):
+```powershell
+pip install -r requirements.txt
+pip install ragas==0.4.3 langchain-openai==1.6.3
+pip install --no-deps openai==3.3.1
+```
+Then run with `python -m app.evals.offline_eval`.
+
+### Optional: the mock backlog API as a standalone service
+`app/api/main.py` is a thin FastAPI wrapper around the same in-process
+store, kept for manual/Swagger-style testing. It has its own separate
+in-memory state (not shared with the Streamlit app), so it's useful for
+poking at the API shape directly, not for verifying a UI write-back.
+```powershell
+uvicorn app.api.main:app --reload
+```
+Swagger UI: http://localhost:8000/docs
 
 ### Running individual pieces directly (for testing/debugging)
 Any module that imports across `app/` subfolders must be run with `-m` from the project root, e.g.:

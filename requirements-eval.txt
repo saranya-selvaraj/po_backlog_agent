@@ -1,0 +1,22 @@
+# Offline RAGAS eval only (app/evals/offline_eval.py) - never imported by
+# the deployed app itself, so this is kept separate from requirements.txt
+# and is NOT installed by Cloud Run's buildpack build.
+#
+# ragas==0.4.3 pulls in an openai version range incompatible with the
+# app's pinned openai==3.3.1, so pip cannot resolve both files together
+# in a single `pip install -r requirements.txt -r requirements-eval.txt`
+# call (this is exactly the error Cloud Build hit when both were merged
+# into one requirements.txt). Install in this exact order instead, so
+# each step resolves independently rather than as one combined set:
+#
+#   pip install -r requirements.txt
+#   pip install ragas==0.4.3 langchain-openai==1.6.3
+#   pip install --no-deps openai==3.3.1
+#
+# The last step re-pins openai back to the app's exact version after
+# ragas's install may have shifted it - the two openai versions differ
+# by an unused patch release, confirmed working with the app's actual
+# usage in this project during eval development.
+
+ragas==0.4.3
+langchain-openai==1.6.3

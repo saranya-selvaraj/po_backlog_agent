@@ -1,9 +1,19 @@
+# torch is only used via sentence-transformers for local CPU embeddings -
+# no GPU exists on Cloud Run (or in local dev here), so pull the CPU-only
+# wheel instead of the default CUDA-bundled build (several GB smaller,
+# faster buildpack builds). --extra-index-url adds PyTorch's CPU wheel
+# index alongside PyPI rather than replacing it, so every other package
+# below still resolves normally from PyPI; the "+cpu" local version on
+# torch itself is what makes the CPU wheel selection unambiguous.
+--extra-index-url https://download.pytorch.org/whl/cpu
+
 fastapi==0.141.1
 uvicorn[standard]==0.52.4
 sentence-transformers==6.0.0
 chromadb==1.5.9
+langsmith==0.14.0
 openai==3.3.1
 python-dotenv==1.2.3
-requests==2.34.2
 streamlit==1.62.0
-torch==2.13.0
+supabase==2.31.0
+torch==2.13.0+cpu
